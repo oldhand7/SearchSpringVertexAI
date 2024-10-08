@@ -26,6 +26,9 @@
         .product-title {
             font-weight: bold;
         }
+        .pagination-info {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -40,7 +43,19 @@
                 <label for="query">Search Query</label>
                 <input type="text" class="form-control" id="query" value="Shoes">
             </div>
+            
         </div>
+
+        <!-- <div class="form-row">
+            <div class="form-group col-md-2">
+                <label for="page">SearchSpring Page</label>
+                <input type="number" class="form-control" id="searchspring_page" value="1" min="1">
+            </div>
+            <div class="form-group col-md-2 offset-2">
+                <label for="page">Vertex AI Page</label>
+                <input type="number" class="form-control" id="vertexai_page" value="1" min="1">
+            </div>
+        </div> -->
         <button type="submit" class="btn btn-primary">Compare APIs</button>
     </form>
 
@@ -52,6 +67,7 @@
         <div class="col-md-6">
             <h3 class="text-center">Vertex AI Search Results</h3>
             <div id="resultsVertexAI"></div>
+            <div class="pagination-info" id="vertexPaginationInfo"></div>
         </div>
     </div>
 </div>
@@ -62,20 +78,20 @@
 
 <script>
     $(document).ready(function() {
+
+        let nextToken = ""
         $('#searchForm').submit(function(e) {
             e.preventDefault();
 
             // Collecting form values
             const query = $('#query').val();
+            // const searchspring_page = $('#searchspring_page').val();
+            const searchspring_page = 1;
+            // const vertexai_page = $('#vertexai_page').val();
+            const vertexai_page = 1;
 
             // SearchSpring API URL
-            const searchSpringApiUrl = `https://pk5g8d.a.searchspring.io/api/search/search.json?siteId=pk5g8d&resultsFormat=json&q=${query}&userId=9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d&sessionId=9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d&pageLoadId=9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d&resultsPerPage=24&page=1&redirectResponse=minimal`;
-
-            // Vertex AI Search API URL and payload
-            const vertexAIUrl = `https://mro-vertex-ai-search-295037490706.us-central1.run.app/search`;
-            const vertexAIPayload = {
-                query: query
-            };
+            const searchSpringApiUrl = `https://pk5g8d.a.searchspring.io/api/search/search.json?siteId=pk5g8d&resultsFormat=json&q=${query}&userId=9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d&sessionId=9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d&pageLoadId=9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d&resultsPerPage=10&page=${searchspring_page}&redirectResponse=minimal`;
 
             // Fetch data from SearchSpring API
             $.get(searchSpringApiUrl, function(data) {
@@ -101,6 +117,15 @@
                 });
             });
 
+            // Vertex AI API URL and payload
+
+            
+            const vertexAIUrl = `https://mro-vertex-ai-search-pagination-295037490706.us-central1.run.app/search?page=${vertexai_page}`;
+            const vertexAIPayload = {
+                query: query
+                
+            };
+
             // Fetch data from Vertex AI Search API
             $.ajax({
                 url: vertexAIUrl,
@@ -109,25 +134,33 @@
                 data: JSON.stringify(vertexAIPayload),
                 success: function(data) {
                     const products = data.results; // Adjust based on actual response structure
+                    const pagination = data; // Store pagination data (e.g., total_products, page_count)
+                    const execution_time_seconds = data.execution_time_seconds
                     $('#resultsVertexAI').empty(); // Clear previous results
+                    $('#resultsVertexAI').append(`<div> total execution time: ${execution_time_seconds} </div>`);
 
                     // Display Vertex AI results
                     products.forEach(product => {
                         const productHtml = `
                             <div class="product-card">
                                 <div class="media">
-                                    <img src="${product.imageUrl}" alt="${product.brand}">
+                                    <img src="${product.image}" alt="${product.brand}">
                                     <div class="media-body">
-                                        <h5 class="mt-0 product-title">${product.brand}</h5>
-                                        <p>${product.description}</p>
+                                        <h5 class="mt-0 product-title">${product.name}</h5>
                                         <p>Price: $${product.price}</p>
-                                        <a href="${product.product_url}" class="btn btn-info" target="_blank">View Product</a>
+                                        <a href="${product.url}" class="btn btn-info" target="_blank">View Product</a>
                                     </div>
                                 </div>
                             </div>
                         `;
                         $('#resultsVertexAI').append(productHtml);
                     });
+
+                    // Display pagination info (total products, page count)
+                    $('#vertexPaginationInfo').html(`
+                        <p>Total Products: ${pagination.total_products}</p>
+                        <p>Page ${vertexai_page} of ${pagination.page_count}</p>
+                    `);
                 }
             });
         });
