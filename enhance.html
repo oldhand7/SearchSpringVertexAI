@@ -169,7 +169,7 @@
             // Function to fetch Vertex AI results
             function fetchVertexAIResults() {
                 const query = $('#query').val();
-                const vertexAIUrl = `https://mro-vertex-ai-search-pagination-295037490706.us-central1.run.app/search?offset=${vertexai_page}&page_token=${nextPageToken}`;
+                const vertexAIUrl = `https://mro-vertex-ai-search-pagination-295037490706.us-central1.run.app/search?offset=${(vertexai_page - 1) * 10}&page_token=${nextPageToken}`;
                 const vertexAIPayload = {
                     query: query,
                 };
