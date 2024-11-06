@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Comparison Tool</title>
+    <!-- Bootstrap CSS for styling -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 20px;
+        }
+
+        .results-container {
+            margin-top: 20px;
+        }
+
+        .product-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .product-card img {
+            max-width: 100px;
+            margin-right: 15px;
+        }
+
+        .product-title {
+            font-weight: bold;
+        }
+
+        .pagination-info {
+            margin-top: 10px;
+        }
+
+        .facet-container {
+            margin-bottom: 20px;
+        }
+
+        .facet-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .accordion .card-header {
+            padding: 0;
+        }
+
+        .accordion .btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            text-align: left;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1 class="text-center mb-4">API Comparison: SearchSpring vs Vertex AI Search</h1>
+
+        <!-- Form to input API parameters -->
+        <form id="searchForm" class="mb-4">
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="query">Search Query</label>
+                    <input type="text" class="form-control" id="query" value="a">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Compare APIs</button>
+        </form>
+
+        <!-- Facets for Vertex AI Search -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="row results-container">
+                    <div class="col-md-4">
+                        <h4>Facets</h4>
+
+                        <!-- Accordion for facet keys -->
+                        <div class="accordion" id="facetsAccordion">
+                            <div id="facetsContainer"></div> <!-- Facets will be rendered here -->
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <h3 class="text-center">Vertex AI Search Results</h3>
+                        <div id="resultsVertexAI"></div>
+                        <div class="pagination-info" id="vertexPaginationInfo"></div>
+                        <div class="text-center mt-3">
+                            <button id="prevPageBtn" class="btn btn-secondary" disabled>Previous Page</button>
+                            <button id="nextPageBtn" class="btn btn-secondary" disabled>Next Page</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h3 class="text-center">SearchSpring Results</h3>
+                <div id="resultsSearchSpring"></div>
+                <div class="pagination-info" id="searchSpringPaginationInfo"></div>
+                <div class="text-center mt-3">
+                    <button id="prevSearchSpringPageBtn" class="btn btn-secondary" disabled>Previous Page</button>
+                    <button id="nextSearchSpringPageBtn" class="btn btn-secondary" disabled>Next Page</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery and Bootstrap JS for handling form and layout -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            let vertexai_page = 1; // Initialize the page number
+            let nextPageToken = null; // Token for fetching the next page
+            let totalPageCount = 0; // Track the total number of pages
+            let selectedFacets = {}; // Store selected facets
+
+            $('#searchForm').submit(function (e) {
+                e.preventDefault();
+                vertexai_page = 1; // Reset to the first page on a new search
+                nextPageToken = null; // Reset the token for a new search
+                selectedFacets = getSelectedFacets(); // Get selected facets
+                fetchVertexAIResults(); // Fetch the results
+                fetchSearchSpringAIResults(); // Fetch the results
+            });
+
+            let searchspring_page = 1; // Initialize the page number
+            let totalSearchSpringPages = 0; // Track the total number of pages
+
+            function fetchSearchSpringAIResults() {
+                const query = $('#query').val();
+                const searchSpringApiUrl = `https://pk5g8d.a.searchspring.io/api/search/search.json?siteId=pk5g8d&resultsFormat=json&q=${query}&userId=9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d&sessionId=9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d&pageLoadId=9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d&resultsPerPage=10&page=${searchspring_page}&redirectResponse=minimal`;
+
+                const startTime = performance.now(); // Record the start time
+
+                // Fetch data from SearchSpring API
+                $.get(searchSpringApiUrl, function (data) {
+                    const endTime = performance.now(); // Record the end time
+                    const ajaxDuration = (endTime - startTime).toFixed(2); // Calculate the duration in milliseconds
+
+                    const products = data.results;
+                    const pagination = data.pagination;
+                    totalSearchSpringPages = pagination.totalPages;
+
+                    $('#resultsSearchSpring').empty(); // Clear previous results
+
+                    // Display the AJAX request duration
+                    $('#resultsSearchSpring').append(`<div>SearchSpring Request Duration: ${ajaxDuration} ms</div>`);
+
+                    // Display SearchSpring results
+                    products.forEach(product => {
+                        const productHtml = `
+                <div class="product-card">
+                    <div class="media">
+                        <img src="${product.thumbnailImageUrl}" alt="${product.brand}">
+                        <div class="media-body">
+                            <h5 class="mt-0 product-title">${product.brand}</h5>
+                            <p>${product.description}</p>
+                            <p>Price: $${product.price}</p>
+                            <a href="${product.product_url}" class="btn btn-info" target="_blank">View Product</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+                        $('#resultsSearchSpring').append(productHtml);
+                    });
+
+                    // Display pagination info (current page, total pages)
+                    $('#searchSpringPaginationInfo').html(`
+            <p>Total Results: ${pagination.totalResults}</p>
+            <p>Page ${pagination.currentPage} of ${pagination.totalPages}</p>
+        `);
+
+                    // Enable/disable pagination buttons based on the current page
+                    $('#prevSearchSpringPageBtn').prop('disabled', pagination.currentPage <= 1);
+                    $('#nextSearchSpringPageBtn').prop('disabled', pagination.currentPage >= totalSearchSpringPages);
+                });
+            }
+
+
+            // Function to get selected facet values
+            function getSelectedFacets() {
+                const selectedFacets = {};
+                $('#facetsContainer input[type=checkbox]:checked').each(function () {
+                    const facetKey = $(this).data('facet-key');
+                    const facetValue = $(this).val();
+
+                    if (!selectedFacets[facetKey]) {
+                        selectedFacets[facetKey] = [];
+                    }
+                    selectedFacets[facetKey].push(facetValue);
+                });
+                return selectedFacets;
+            }
+
+            function fetchVertexAIResults() {
+                const query = $('#query').val();
+                const vertexAIUrl = `http://localhost:8000/search?offset=${(vertexai_page - 1) * 10}&page_token=${nextPageToken}`;
+                const vertexAIPayload = {
+                    query: query,
+                    facets: ["brand", "price"],
+                    filter: buildFilterFromFacets(selectedFacets) // Add selected facets as filters
+                };
+
+                // Fetch data from Vertex AI Search API
+                $.ajax({
+                    url: vertexAIUrl,
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(vertexAIPayload),
+                    success: function (data) {
+                        const products = data.results;
+                        const pagination = data;
+                        const execution_time_seconds = data.execution_time_seconds * 1000;
+                        nextPageToken = data.next_page_token;
+                        totalPageCount = pagination.page_count;
+
+                        $('#resultsVertexAI').empty(); // Clear previous results
+                        $('#resultsVertexAI').append(`<div>Vertex AI search time: ${execution_time_seconds}ms</div>`);
+
+                        // Display Vertex AI results
+                        products.forEach(product => {
+                            const productHtml = `
+                                <div class="product-card">
+                                    <div class="media">
+                                        <img src="${product.image}" alt="${product.brand}">
+                                        <div class="media-body">
+                                            <h5 class="mt-0 product-title">${product.brand}</h5>
+                                            <p>${product.name}</p>
+                                            <p>Price: $${product.price}</p>
+                                            <a href="${product.uri}" class="btn btn-info" target="_blank">View Product</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            $('#resultsVertexAI').append(productHtml);
+                        });
+
+                        // Display pagination info (total products, page count)
+                        $('#vertexPaginationInfo').html(`
+                            <p>Total Products: ${pagination.total_products}</p>
+                            <p>Page ${vertexai_page} of ${totalPageCount}</p>
+                        `);
+
+                        // Enable/disable pagination buttons based on the current page
+                        $('#prevPageBtn').prop('disabled', vertexai_page <= 1);
+                        $('#nextPageBtn').prop('disabled', vertexai_page >= totalPageCount);
+
+                        // Render facets
+                        renderFacets(data.facets);
+                    }
+                });
+            }
+
+            // Build filter query string from selected facets
+            function buildFilterFromFacets(selectedFacets) {
+                let filter = '';
+                for (const facetKey in selectedFacets) {
+                    const facetValues = selectedFacets[facetKey].map(value => `"${value}"`);
+                    filter += `${facetKey} in (${facetValues.join(',')}) `;
+                }
+                return filter.trim();
+            }
+
+            // Render facets as checkboxes in accordion
+            function renderFacets(facets) {
+                $('#facetsContainer').empty(); // Clear existing facets
+
+                facets.forEach((facet, index) => {
+                    const facetHtml = `
+                        <div class="card">
+                            <div class="card-header" id="heading${index}">
+                                <h5 class="mb-0">
+                                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse${index}" aria-expanded="true" aria-controls="collapse${index}">
+                                        ${facet.facet_key}
+                                    </button>
+                                </h5>
+                            </div>
+
+                            <div id="collapse${index}" class="collapse" aria-labelledby="heading${index}" data-parent="#facetsAccordion">
+                                <div class="card-body">
+                                    ${facet.facet_values.map(facetValue => `
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="${facetValue.value}" data-facet-key="${facet.facet_key}">
+                                            <label class="form-check-label">
+                                                ${facetValue.value} (${facetValue.count})
+                                            </label>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    $('#facetsContainer').append(facetHtml);
+                });
+            }
+
+            // Pagination button event handlers
+            $('#nextPageBtn').on('click', function () {
+                if (vertexai_page < totalPageCount) {
+                    vertexai_page++;
+                    fetchVertexAIResults();
+                }
+            });
+
+            $('#prevPageBtn').on('click', function () {
+                if (vertexai_page > 1) {
+                    vertexai_page--;
+                    nextPageToken = null; // Reset the token if going to the previous page
+                    fetchVertexAIResults();
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>
+
