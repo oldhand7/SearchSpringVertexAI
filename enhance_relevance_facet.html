@@ -172,7 +172,7 @@
                 const vertexAIUrl = `https://mro-vertex-ai-search-pagination-facet-295037490706.us-central1.run.app/search?offset=${(vertexai_page - 1) * 10}&page_token=${nextPageToken}`;
                 const vertexAIPayload = {
                     query: query,
-                    facets: ["brand", "price"]
+                    facets: ["brand", "price", "categories", "attributes.mpn"]
                 };
 
                 // Fetch data from Vertex AI Search API
