@@ -55,9 +55,9 @@
             padding: 10px;
             text-align: left;
         }
-
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1 class="text-center mb-4">API Comparison: SearchSpring vs Vertex AI Search</h1>
@@ -75,6 +75,14 @@
 
         <!-- Facets for Vertex AI Search -->
         <div class="row">
+
+            <div id="activeFilters" class="mt-6">
+                <h6>Active Filters:</h6>
+                <p id="globalFilterDisplay">None</p>
+            </div>
+        </div>
+        <div class="row">
+
             <div class="col-md-6">
                 <div class="row results-container">
                     <div class="col-md-4">
@@ -83,11 +91,7 @@
                         <div class="accordion" id="facetsAccordion">
                             <div id="facetsContainer"></div> <!-- Facets will be rendered here -->
                         </div>
-                        <div id="activeFilters" class="mt-4">
-                            <h4>Active Filters:</h4>
-                            <p id="globalFilterDisplay">None</p>
-                        </div>
-                        
+
                     </div>
                     <div class="col-md-8">
                         <h3 class="text-center">Vertex AI Search Results</h3>
@@ -137,7 +141,7 @@
             function fetchVertexAIResults() {
                 const query = $('#query').val();
                 const vertexAIUrl = `https://mro-vertex-ai-search-pagination-facet-295037490706.us-central1.run.app/search?offset=${(vertexai_page - 1) * 10}&page_token=${nextPageToken}`;
-                
+
                 const vertexAIPayload = {
                     query: query,
                     facets: ["brand", "attributes.mpn", "categories"],
