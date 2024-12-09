@@ -144,7 +144,106 @@
 
                 const vertexAIPayload = {
                     query: query,
-                    facets: ["brand", "attributes.mpn", "categories"],
+                    facets: ["brand", "attributes.mpn", "categories", "attributes.material",
+                        "attributes.dimensions",
+                        "attributes.length",
+                        "attributes.width",
+                        "attributes.height",
+                        "attributes.diameter",
+                        "attributes.thickness",
+                        "attributes.weight",
+                        "attributes.load_capacity",
+                        "attributes.power_requirement",
+                        "attributes.voltage",
+                        "attributes.amperage",
+                        "attributes.wattage",
+                        "attributes.thread_size",
+                        "attributes.bore_size",
+                        "attributes.type",
+                        "attributes.style",
+                        "attributes.speed",
+                        "attributes.rpm",
+                        "attributes.tolerance",
+                        "attributes.pressure_rating",
+                        "attributes.temperature_range",
+                        "attributes.brand",
+                        "attributes.part_number",
+                        "attributes.application",
+                        "attributes.finish",
+                        "attributes.coating_material",
+                        "attributes.cutting_edge_length",
+                        "attributes.cutting_diameter",
+                        "attributes.cutting_depth",
+                        "attributes.flange_diameter",
+                        "attributes.housing_material",
+                        "attributes.shaft_diameter",
+                        "attributes.operating_temperature",
+                        "attributes.operating_voltage",
+                        "attributes.connector_size",
+                        "attributes.actuator_type",
+                        "attributes.actuator_material",
+                        "attributes.thread_pitch",
+                        "attributes.mounting_hole_size",
+                        "attributes.mounting_type",
+                        "attributes.sealing_material",
+                        "attributes.dynamic_load_rating",
+                        "attributes.static_load_rating",
+                        "attributes.overall_length",
+                        "attributes.overall_width",
+                        "attributes.overall_height",
+                        "attributes.cable_length",
+                        "attributes.fitting_size",
+                        "attributes.effective_length",
+                        "attributes.usable_length",
+                        "attributes.insulation_material",
+                        "attributes.tension_rating",
+                        "attributes.impact_rating",
+                        "attributes.frequency",
+                        "attributes.current_rating",
+                        "attributes.angle_tolerance",
+                        "attributes.groove_width",
+                        "attributes.bearing_type",
+                        "attributes.bearing_material",
+                        "attributes.shaft_material",
+                        "attributes.inner_diameter",
+                        "attributes.outer_diameter",
+                        "attributes.torque_rating",
+                        "attributes.pressure_capacity",
+                        "attributes.axial_clearance",
+                        "attributes.radial_clearance",
+                        "attributes.load_rating",
+                        "attributes.dynamic_capacity",
+                        "attributes.permissible_speed",
+                        "attributes.spindle_speed",
+                        "attributes.jaw_width",
+                        "attributes.blade_length",
+                        "attributes.blade_width",
+                        "attributes.blade_thickness",
+                        "attributes.arbor_size",
+                        "attributes.cutting_speed",
+                        "attributes.hardness",
+                        "attributes.surface_finish",
+                        "attributes.bolt_size",
+                        "attributes.bolt_circle_diameter",
+                        "attributes.bolt_length",
+                        "attributes.bolt_material",
+                        "attributes.thread_direction",
+                        "attributes.collet_size",
+                        "attributes.drill_size",
+                        "attributes.gear_type",
+                        "attributes.coupling_type",
+                        "attributes.flange_thickness",
+                        "attributes.lock_type",
+                        "attributes.mounting_orientation",
+                        "attributes.fitting_material",
+                        "attributes.edge_radius",
+                        "attributes.keyway_width",
+                        "attributes.number_of_teeth",
+                        "attributes.pitch_diameter",
+                        "attributes.pitch_length",
+                        "attributes.stroke_length",
+                        "attributes.tension_force",
+                        "attributes.vibration_rating"],
                     filter: buildFilterFromFacets()
                 };
 
@@ -211,6 +310,7 @@
                 let filterParts = [];
                 const selectedFacets = getSelectedFacets();
 
+                // Handle specific non-attribute facets
                 if (selectedFacets['brand'] && selectedFacets['brand'].length > 0) {
                     const selectedBrands = selectedFacets['brand'].map(value => `"${value}"`).join(',');
                     filterParts.push(`brands:ANY(${selectedBrands})`);
@@ -219,10 +319,14 @@
                     const selectedCategories = selectedFacets['categories'].map(value => `"${value}"`).join(',');
                     filterParts.push(`categories:ANY(${selectedCategories})`);
                 }
-                if (selectedFacets['attributes.mpn'] && selectedFacets['attributes.mpn'].length > 0) {
-                    const selectedMpn = selectedFacets['attributes.mpn'].map(value => `"${value}"`).join(',');
-                    filterParts.push(`attributes.mpn:ANY(${selectedMpn})`);
-                }
+
+                // Dynamically handle all "attributes." keys
+                Object.keys(selectedFacets).forEach(key => {
+                    if (key.startsWith('attributes.') && selectedFacets[key].length > 0) {
+                        const selectedValues = selectedFacets[key].map(value => `"${value}"`).join(',');
+                        filterParts.push(`${key}:ANY(${selectedValues})`);
+                    }
+                });
 
                 const newFilter = filterParts.join(' AND ');
                 if (newFilter) {
@@ -233,6 +337,7 @@
                 updateGlobalFilterDisplay();
                 return globalFilter;
             }
+
 
             // Function to get selected facet values
             function getSelectedFacets() {
