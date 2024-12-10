@@ -298,13 +298,33 @@
             }
             function updateGlobalFilterDisplay() {
                 if (globalFilter) {
-                    // Convert globalFilter to a user-friendly format
-                    const userFriendlyFilter = globalFilter.replace(/:ANY\(|\)/g, '');
-                    $('#globalFilterDisplay').text(userFriendlyFilter);
+                    // Convert the globalFilter into an array of readable filter parts
+                    const filterParts = globalFilter.split(' AND ').map(part => {
+                        const [key, value] = part.split(':ANY(');
+                        const cleanedKey = key.replace(/_/g, ' ').replace(/\./g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+                        const cleanedValue = value.replace(/[")]/g, '').split(',').map(v => v.trim());
+                        return { key: cleanedKey, values: cleanedValue };
+                    });
+
+                    // Build a user-friendly HTML representation
+                    const filterHtml = filterParts.map(filter => {
+                        return `
+                <div>
+                    <strong>${filter.key}:</strong>
+                    <ul>
+                        ${filter.values.map(value => `<li>${value}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+                    }).join('');
+
+                    // Display the formatted filter
+                    $('#globalFilterDisplay').html(filterHtml);
                 } else {
-                    $('#globalFilterDisplay').text("None");
+                    $('#globalFilterDisplay').html("<em>No filters applied</em>");
                 }
             }
+
             // Function to build the filter query string
             function buildFilterFromFacets() {
                 let filterParts = [];
@@ -353,46 +373,79 @@
                 });
                 return selectedFacets;
             }
-
-            // Render facets as checkboxes in accordion
             function renderFacets(facets) {
+                // Save the current state of opened accordions
+                const openedAccordions = {};
+                $('#facetsContainer .collapse.show').each(function () {
+                    const facetKey = $(this).attr('data-facet-key');
+                    openedAccordions[facetKey] = true;
+                });
+
                 $('#facetsContainer').empty(); // Clear existing facets
 
-                facets.forEach((facet, index) => {
-                    const facetHtml = `
-                        <div class="card">
-                            <div class="card-header" id="heading${index}">
-                                <h5 class="mb-0">
-                                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse${index}" aria-expanded="true" aria-controls="collapse${index}">
-                                        ${facet.facet_key}
-                                    </button>
-                                </h5>
-                            </div>
+                // Filter facets to include only those with non-empty facet_values
+                const filteredFacets = facets.filter(facet => facet.facet_values.length > 0);
 
-                            <div id="collapse${index}" class="collapse" aria-labelledby="heading${index}" data-parent="#facetsAccordion">
-                                <div class="card-body">
-                                    ${facet.facet_values.map(facetValue => `
-                                        <div class="form-check">
-                                            <input class="form-check-input facet-checkbox" type="checkbox" value="${facetValue.value}" data-facet-key="${facet.facet_key}">
-                                            <label class="form-check-label">
-                                                ${facetValue.value} (${facetValue.count})
-                                            </label>
-                                        </div>
-                                    `).join('')}
-                                </div>
+                filteredFacets.forEach((facet, index) => {
+                    const isOpen = openedAccordions[facet.facet_key] || false; // Check if this facet should be open
+                    const expandedClass = isOpen ? 'show' : '';
+                    const ariaExpanded = isOpen ? 'true' : 'false';
+
+                    const facetHtml = `
+            <div class="card">
+                <div class="card-header" id="heading${index}">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse${index}" aria-expanded="${ariaExpanded}" aria-controls="collapse${index}">
+                            ${formatFacetKey(facet.facet_key)}
+                        </button>
+                    </h5>
+                </div>
+
+                <div id="collapse${index}" class="collapse ${expandedClass}" data-facet-key="${facet.facet_key}" aria-labelledby="heading${index}">
+                    <div class="card-body">
+                        ${facet.facet_values.map(facetValue => `
+                            <div class="form-check">
+                                <input class="form-check-input facet-checkbox" type="checkbox" value="${facetValue.value}" data-facet-key="${facet.facet_key}">
+                                <label class="form-check-label">
+                                    ${facetValue.value} <span class="badge badge-secondary">${facetValue.count}</span>
+                                </label>
                             </div>
-                        </div>
-                    `;
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
                     $('#facetsContainer').append(facetHtml);
                 });
 
-                // Bind facet checkbox change events to refetch results with the new facets
+                // Add event listener to save the open state on toggle
+                $('.collapse').on('show.bs.collapse', function () {
+                    const facetKey = $(this).attr('data-facet-key');
+                    openedAccordions[facetKey] = true;
+                });
+
+                $('.collapse').on('hide.bs.collapse', function () {
+                    const facetKey = $(this).attr('data-facet-key');
+                    delete openedAccordions[facetKey];
+                });
+
+                // Add event listener to facet checkboxes
                 $('.facet-checkbox').on('change', function () {
                     vertexai_page = 1; // Reset to the first page when a facet is selected
                     nextPageToken = null;
                     fetchVertexAIResults();
                 });
             }
+
+            // Utility function to format facet keys (for better readability)
+            function formatFacetKey(key) {
+                // Replace underscores and dots with spaces and capitalize words
+                return key.replace(/_/g, ' ').replace(/\./g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+            }
+
+
+
 
             // Pagination button event handlers
             $('#nextPageBtn').on('click', function () {
